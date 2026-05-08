@@ -329,6 +329,15 @@
     .edit-item-row .item-icon { font-size: 20px; }
     .edit-item-row .item-name { flex: 1; font-size: 14px; }
 
+    .edit-btn {
+      background: none;
+      border: none;
+      color: #667eea;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+
     .delete-btn {
       background: none;
       border: none;
@@ -422,10 +431,10 @@
     <button class="btn btn-edit" onclick="openEditModal()">✏️ 持ち物を編集</button>
   </div>
 
-  <!-- 追加モーダル -->
+  <!-- 追加・編集モーダル -->
   <div class="modal-overlay" id="addModal">
     <div class="modal">
-      <h2>持ち物を追加</h2>
+      <h2 id="addModalTitle">持ち物を追加</h2>
       <div class="modal-section">
         <label>持ち物の名前</label>
         <input type="text" id="addName" placeholder="例: 水筒">
@@ -452,7 +461,7 @@
       </div>
       <div class="modal-actions">
         <button class="btn btn-reset" onclick="closeAddModal()">キャンセル</button>
-        <button class="btn btn-edit" onclick="saveNewItem()">追加する</button>
+        <button class="btn btn-edit" id="addModalSaveBtn" onclick="saveNewItem()">追加する</button>
       </div>
     </div>
   </div>
@@ -700,6 +709,8 @@ function resetAll() {
   }
 }
 
+let editingItemId = null;
+
 function openEditModal() {
   const list = document.getElementById('editList');
   list.innerHTML = items.map(item => `
@@ -707,10 +718,57 @@ function openEditModal() {
       <div class="item-icon">${item.icon}</div>
       <div class="item-name">${item.name}</div>
       <span style="font-size:11px;color:#9ca3af;">${item.days.map(d => DAYS[DAY_KEYS.indexOf(d)]).join('')}</span>
+      <button class="edit-btn" onclick="openEditItemModal(${item.id})">✏️</button>
       <button class="delete-btn" onclick="deleteItem(${item.id})">×</button>
     </div>
   `).join('');
   document.getElementById('editModal').classList.add('show');
+}
+
+function openEditItemModal(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  editingItemId = id;
+  document.getElementById('editModal').classList.remove('show');
+  document.getElementById('addModalTitle').textContent = '持ち物を編集';
+  document.getElementById('addModalSaveBtn').textContent = '保存する';
+  document.getElementById('addModalSaveBtn').setAttribute('onclick', 'saveEditedItem()');
+  document.getElementById('addName').value = item.name;
+  document.getElementById('addIcon').value = item.icon;
+  document.getElementById('addCategory').value = item.category;
+  document.getElementById('addNote').value = item.note || '';
+  addDaysSelected = [...item.days];
+  renderDaySelector();
+  document.getElementById('addModal').classList.add('show');
+}
+
+function saveEditedItem() {
+  const name = document.getElementById('addName').value.trim();
+  const icon = document.getElementById('addIcon').value.trim() || '📦';
+  const category = document.getElementById('addCategory').value;
+  const note = document.getElementById('addNote').value.trim();
+
+  if (!name) {
+    alert('持ち物の名前を入力してね！');
+    return;
+  }
+  if (addDaysSelected.length === 0) {
+    alert('少なくとも1つの曜日を選んでね！');
+    return;
+  }
+
+  const item = items.find(i => i.id === editingItemId);
+  if (item) {
+    item.name = name;
+    item.icon = icon;
+    item.category = category;
+    item.note = note;
+    item.days = [...addDaysSelected];
+    saveData();
+  }
+  editingItemId = null;
+  document.getElementById('addModal').classList.remove('show');
+  openEditModal();
 }
 
 function closeEditModal() {
@@ -730,7 +788,11 @@ function deleteItem(id) {
 }
 
 function openAddModal() {
+  editingItemId = null;
   document.getElementById('editModal').classList.remove('show');
+  document.getElementById('addModalTitle').textContent = '持ち物を追加';
+  document.getElementById('addModalSaveBtn').textContent = '追加する';
+  document.getElementById('addModalSaveBtn').setAttribute('onclick', 'saveNewItem()');
   document.getElementById('addName').value = '';
   document.getElementById('addIcon').value = '';
   document.getElementById('addNote').value = '';
